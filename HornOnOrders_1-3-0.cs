@@ -1,30 +1,31 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using TaleWorlds.Core;
 using TaleWorlds.Engine;
 using TaleWorlds.MountAndBlade;
 using ModLib;
 using System;
+using HarmonyLib;
+using System.Windows.Forms;
 
 namespace HornOnOrders
 {
     public class HornOnOrders : MBSubModuleBase
     {
-        protected override void OnSubModuleLoad()
+        protected override void OnBeforeInitialModuleScreenSetAsRoot()
         {
-            InformationManager.DisplayMessage(new InformationMessage("Loaded Horn On Movement Orders Successfully!"));
             try
             {
-                FileDatabase.Initialise("HornOnOrders");
-                HornOnOrdersSettings settings = FileDatabase.Get<HornOnOrdersSettings>(HornOnOrdersSettings.InstanceID);
-                if (settings == null) settings = new HornOnOrdersSettings();
-                SettingsDatabase.RegisterSettings(settings);
+                var harmony = new Harmony("mod.bannerlord.mipen");
+                harmony.PatchAll();
             }
             catch (Exception ex)
             {
-                //Handle exceptions
+                MessageBox.Show($"Error Initialising Bannerlord Tweaks:\n\n{ex.ToStringFull()}");
             }
+        }
+        protected override void OnSubModuleLoad()
+        {
             base.OnSubModuleLoad();
         }
 
@@ -41,7 +42,7 @@ namespace HornOnOrders
                 {
                     OrderController playerOrderController = Agent.Main.Team.PlayerOrderController;
                     bool notEmptyPlayerOrderController = playerOrderController != null;
-                    if(notEmptyPlayerOrderController)
+                    if (notEmptyPlayerOrderController)
                     {
                         bool haveSelectedFormations = playerOrderController.SelectedFormations.Count > 0;
                         if (haveSelectedFormations)
@@ -49,7 +50,7 @@ namespace HornOnOrders
                             bool triggerHorn = false;
                             string movement = "";
                             int hornId = 0;
-                            foreach(Formation formation in playerOrderController.SelectedFormations)
+                            foreach (Formation formation in playerOrderController.SelectedFormations)
                             {
                                 bool checkMovementOrder = false;
                                 if (!this._selectedFormations.ContainsKey(formation.FormationIndex))
@@ -58,9 +59,10 @@ namespace HornOnOrders
                                     if (first)
                                         totalUnits += formation.CountOfUnits;
                                     checkMovementOrder = true;
-                                } else
+                                }
+                                else
                                 {
-                                    if(this._selectedFormations[formation.FormationIndex] != formation.MovementOrder)
+                                    if (this._selectedFormations[formation.FormationIndex] != formation.MovementOrder)
                                     {
                                         this._selectedFormations[formation.FormationIndex] = formation.MovementOrder;
                                         if (first)
@@ -82,7 +84,7 @@ namespace HornOnOrders
                                         {
                                             movement = "advance";
                                             hornId = 694;
-                                        } 
+                                        }
                                         else if (formation.MovementOrder == MovementOrder.MovementOrderFallBack)
                                         {
                                             movement = "fallback";
@@ -92,7 +94,7 @@ namespace HornOnOrders
                                         {
                                             movement = "stop";
                                             hornId = 694;
-                                        } 
+                                        }
                                         else if (formation.MovementOrder == MovementOrder.MovementOrderMove(formation.MovementOrder.GetPosition(formation)))
                                         {
                                             movement = "hold";
@@ -103,7 +105,8 @@ namespace HornOnOrders
                                             movement = "follow";
                                             hornId = 694;
                                         }
-                                        else if (formation.MovementOrder == MovementOrder.MovementOrderRetreat) {
+                                        else if (formation.MovementOrder == MovementOrder.MovementOrderRetreat)
+                                        {
                                             movement = "retreat";
                                             hornId = 695;
                                         }
@@ -114,10 +117,10 @@ namespace HornOnOrders
                                     }
                                 }
                             }
-                            if(triggerHorn)
+                            if (triggerHorn)
                             {
                                 float delayConfig;
-                                switch(movement)
+                                switch (movement)
                                 {
                                     case "charge":
                                         delayConfig = HornOnOrdersSettings.Instance.delayCharge;
@@ -144,7 +147,7 @@ namespace HornOnOrders
                                         delayConfig = 1.5f;
                                         break;
                                 }
-                                int delay = (int) ((float)Math.Round(delayConfig, 1)) * 1000;
+                                int delay = (int)((float)Math.Round(delayConfig, 1)) * 1000;
                                 await Task.Delay(delay);
                                 SoundEvent.PlaySound2D(hornId);
                             }
